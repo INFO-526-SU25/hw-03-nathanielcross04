@@ -1,17 +1,181 @@
 ---
 title: "HW 03"
-author: "INSERT YOUR NAME HERE"
+subtitle: "INFO 526 Summer 2025"
+author: "Nathaniel Cross"
 format:
   html:
     embed-resources: true
 toc: true
 ---
 
+## 0 - Setup
+
+```{r}
+#| label: R Setup
+
+# Install and load packages
+if(!require(pacman))
+  install.packages("pacman")
+
+pacman::p_load(tidyverse, 
+               glue,
+               scales,
+               countdown,
+               ggthemes,
+               gt,
+               palmerpenguins,
+               openintro,
+               ggrepel,
+               patchwork,
+               quantreg,
+               janitor,
+               colorspace,
+               broom,
+               fs,
+               here,
+               openintro,
+               gghighlight,
+               lubridate,
+               dsbox,
+               ggridges,
+               gtable,
+               ggimage,
+               png,
+               ggpubr
+               )
+
+devtools::install_github("tidyverse/dsbox")
+
+# Set theme for ggplot2
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = 14))
+
+# Set width of code output
+options(width = 65)
+
+# Set figure parameters for knitr
+knitr::opts_chunk$set(
+  fig.width = 7,        # 7" width
+  fig.asp = 0.618,      # the golden ratio
+  fig.retina = 3,       # dpi multiplier for displaying HTML output on retina
+  fig.align = "center", # center align figures
+  dpi = 300             # higher dpi, sharper image
+)
+```
+
 ## 1 - Du Bois challenge.
 
 ```{r}
-#| label: label-me-1
+#| label: Question 1 code
 
+# Loading in the data
+income <- read_csv("data/income.csv")
+
+income |>
+  glimpse()
+
+# Correcting the data
+income[1, 6] = 0.1
+income[1, 7] = 9.9 # Source: Marcel Hebing, StackOverflow
+
+# Pivoting the data long
+income_clean <- income |>
+  pivot_longer(
+    cols = c("Rent", "Food", "Clothes", "Tax", "Other"), 
+    names_to = "category", 
+    values_to = "expenditure"
+  ) |>
+  glimpse()
+
+# Set image
+image <- "https://cdn.pixabay.com/photo/2012/12/06/06/27/paper-68829_1280.jpg"
+
+# Releveling factor variables
+income_clean <- income_clean |>
+  mutate(
+    Class = fct_relevel(Class, "$100-200", "$200-300", "$300-400", "$400-500", "$500-750", "$750-1000", "$1000 AND OVER"),
+    category = fct_relevel(category, "Rent", "Food", "Clothes", "Tax", "Other"),
+    Class = fct_rev(Class),
+    category = fct_rev(category)
+  )
+
+# Creating cumulative summations
+income_clean <- income_clean |>
+  group_by(Class) |>
+  mutate(label_y = cumsum(expenditure) - 0.5 * expenditure) |>
+  ungroup() # Source: R Graphics Codebook
+
+
+# Prepping labels
+income_clean2 <- income_clean|>
+  filter(category != "Rent" & category != "Tax")
+
+income_clean2 <- income_clean2 |>
+  mutate(
+    perc = "%",
+    expend2 = glue("{expenditure}{perc}")
+  ) 
+  
+# Plotting
+#plot <- 
+income_clean |>
+  ggplot(aes(x = Class, y = expenditure, fill = category)) +
+  geom_col(width = 0.5) +# Source: Geeks for Geeks (https://www.geeksforgeeks.org/r-language/grouped-stacked-and-percent-stacked-barplot-in-ggplot2/) +
+    geom_text(data = income_clean2, aes(y = label_y, label = expend2), color = "black", size = 3, family = "mono") + 
+  labs(
+    y = NULL,
+    x = NULL,
+    title = "INCOME AND EXPENDITURE OF 150 NEGRO FAMILIES IN ATLANTA, GA., U.S.A."
+  ) +
+   annotate(
+    geom = "text",
+    x = 20,
+    y = 20,
+    label = "19%",
+    size = 3,
+    color = "white"
+  ) +
+  coord_flip() +
+  scale_fill_manual(values = c("snow2", "slategray1", "sienna1", "purple", "black")) +
+  theme(
+    legend.position = "none",
+    plot.title.position = "plot",
+    plot.title = element_text(size = 10, hjust = 0.5, face = "bold"),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 8),
+    text = element_text(family = "mono")
+  )
+  
+ggbackground(plot, image) # Source: Guangchuang Yu (https://guangchuangyu.github.io/2018/04/setting-ggplot2-background-with-ggbackground/)
+```
+
+```{r}
+income_clean |>
+  ggplot(aes(x = Class, y = expenditure, fill = category)) +
+
+  geom_col(position = "fill", stat = "identity", width = 0.5) +# Source: Geeks for Geeks (https://www.geeksforgeeks.org/r-language/grouped-stacked-and-percent-stacked-barplot-in-ggplot2/) +
+
+  
+        geom_text(aes(y = y_label, label = expenditure), colour = "black") + 
+
+  labs(
+    y = NULL,
+    x = NULL,
+    title = "INCOME AND EXPENDITURE OF 150 NEGRO FAMILIES IN ATLANTA, GA., U.S.A."
+  ) +
+  coord_flip() +
+  scale_fill_manual(values = c("snow2", "slategray1", "sienna1", "purple", "black")) +
+  theme(
+    legend.position = "none",
+    plot.title.position = "plot",
+    plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 8),
+    text = element_text(family = "mono")
+  )
+  
+ggbackground(plot, image) # Source: Guangchuang Yu (https://guangchuangyu.github.io/2018/04/setting-ggplot2-background-with-ggbackground/)
 ```
 
 ## 2 - COVID survey - interpret
@@ -22,7 +186,6 @@ toc: true
 ```
 
 ## 3 - COVID survey - reconstruct
-
 
 ## 4 - COVID survey - re-reconstruct
 
