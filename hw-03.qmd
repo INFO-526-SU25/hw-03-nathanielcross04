@@ -116,8 +116,7 @@ income_clean2 <- income_clean2 |>
   ) 
   
 # Plotting
-#plot <- 
-income_clean |>
+plot <- income_clean |>
   ggplot(aes(x = Class, y = expenditure, fill = category)) +
   geom_col(width = 0.5) +# Source: Geeks for Geeks (https://www.geeksforgeeks.org/r-language/grouped-stacked-and-percent-stacked-barplot-in-ggplot2/) +
     geom_text(data = income_clean2, aes(y = label_y, label = expend2), color = "black", size = 3, family = "mono") + 
@@ -128,51 +127,36 @@ income_clean |>
   ) +
    annotate(
     geom = "text",
-    x = 20,
-    y = 20,
-    label = "19%",
+    x = c("$100-200", "$200-300", "$300-400", "$400-500", "$500-750"),
+    y = c(9.5, 11, 11.5, 9, 6.5),
+    label = c("19%", "22%", "23%", "18%", "13%"),
     size = 3,
-    color = "white"
+    color = "white",
+    family = "mono"
   ) +
-  coord_flip() +
+   annotate(
+    geom = "text",
+    x = c("$200-300", "$300-400", "$400-500", "$500-750", "$750-1000", "$1000 AND OVER"),
+    y = c(94, 86.25, 72.75, 63.5, 60, 47.25),
+    label = c("4%", "4.5%", "5.5%", "5%", "8%", "4.5%"),
+    size = 2,
+    color = "black",
+    family = "mono"
+  ) +
+   scale_x_discrete(labels = c("1,000     $1,125 \nAND OVER          ", "$750-1000   $880   ", "$500-750   $547   ", "$400-500   $433.82", "$300-400   $335.66", "$200-300   $249.45", "$100-200   $139.10")) +
+  coord_flip(clip = "off") +
   scale_fill_manual(values = c("snow2", "slategray1", "sienna1", "purple", "black")) +
   theme(
-    legend.position = "none",
+    legend.position = "top",
     plot.title.position = "plot",
     plot.title = element_text(size = 10, hjust = 0.5, face = "bold"),
     panel.grid = element_blank(),
     axis.text.x = element_blank(),
-    axis.text.y = element_text(size = 8),
-    text = element_text(family = "mono")
-  )
-  
-ggbackground(plot, image) # Source: Guangchuang Yu (https://guangchuangyu.github.io/2018/04/setting-ggplot2-background-with-ggbackground/)
-```
-
-```{r}
-income_clean |>
-  ggplot(aes(x = Class, y = expenditure, fill = category)) +
-
-  geom_col(position = "fill", stat = "identity", width = 0.5) +# Source: Geeks for Geeks (https://www.geeksforgeeks.org/r-language/grouped-stacked-and-percent-stacked-barplot-in-ggplot2/) +
-
-  
-        geom_text(aes(y = y_label, label = expenditure), colour = "black") + 
-
-  labs(
-    y = NULL,
-    x = NULL,
-    title = "INCOME AND EXPENDITURE OF 150 NEGRO FAMILIES IN ATLANTA, GA., U.S.A."
-  ) +
-  coord_flip() +
-  scale_fill_manual(values = c("snow2", "slategray1", "sienna1", "purple", "black")) +
-  theme(
-    legend.position = "none",
-    plot.title.position = "plot",
-    plot.title = element_text(size = 12, hjust = 0.5, face = "bold"),
-    panel.grid = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_text(size = 8),
-    text = element_text(family = "mono")
+    axis.text.y = element_text(size =7),
+    text = element_text(family = "mono"),
+    legend.title = element_blank(), 
+    legend.text  = element_text(size = 9),
+    legend.key.size = unit(0.3, "cm") # Source: https://www.tidyverse.org/blog/2024/02/ggplot2-3-5-0-legends/
   )
   
 ggbackground(plot, image) # Source: Guangchuang Yu (https://guangchuangyu.github.io/2018/04/setting-ggplot2-background-with-ggbackground/)
@@ -181,7 +165,11 @@ ggbackground(plot, image) # Source: Guangchuang Yu (https://guangchuangyu.github
 ## 2 - COVID survey - interpret
 
 ```{r}
-#| label: label-me-2
+#| label: Question 2 code
+
+
+
+
 
 ```
 
