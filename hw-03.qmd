@@ -164,16 +164,70 @@ ggbackground(plot, image) # Source: Guangchuang Yu (https://guangchuangyu.github
 
 ## 2 - COVID survey - interpret
 
-```{r}
-#| label: Question 2 code
+The visualization deconstructs responses to six statements regarding perceptions of the COVID-19 vaccine and its safety. Responses are measured on a 1-5 Likert scale, with the means depicted in the figure. Error bars are also depicted from the 10th to 90th percentiles of responses per question. Responses are shown on a macro-level first, then classified by identity, such as age, gender, and race (among others). For each statement, there is minor variation by identity group in mean response on the Likert scale; the interesting part of this figure is derived from its depiction of the distributions of each response, which are far less homogeneous. As the surveyed respondents are nursing and medical university students across the United States, most responses indicate high trust in the vaccine and its safety. This holds true for the statements, "I believe the vaccine is safe," "Getting the vaccine makes me feel safer at work," "I am confident in the scientific vetting process for new vaccines," "I trust the information I have received," and "I will recommend the vaccine to others" (abridged for brevity), where all respondents express agreement with the statement (strong or somewhat agree). Less agreement is introduced in response to the statement, "I am concerned about side effects," where agreement is neutral (neither agree nor disagree).
 
-
-
-
-
-```
+Some of the most intriguing results for me in this plot are located among identity groups with heterogeneous variation in responses between statements. For example, there is high variation in responses to the statement "I believe the vaccine is safe" among Asians (with the 10-90th percentiles encompassing almost the entire scale), however this variation is almost completely eliminated when the same group was asked if they would recommend the vaccine to others. I would have expected similar variation in response to these questions because if one does not find the vaccine safe, I would expect them to be less likely to recommend it. I also find it interesting in comparing variation between statements at the macro level, regardless of identity group. More particularly, in almost every identity group there is high heterogeneity in responses to the "I am concerned about side effects" statement, however much less variation in "I will recommend the vaccine to others" statement. This could be indicative of a stronger sense of community in light of a global pandemic (dependent on when the data were collected). Finally, I find a comparison of nursing and medical students interesting, especially when comparing the distributions of their responses. As both are in the medical field literally learning about the processes involved in designing and selling vaccines, I would have expected the distribution of these responses to be similar, however for all statements but the first and third, the distributions are larger for medical students than nurses. While this difference may not be statistically significant, is makes an interesting comparison and begs the questions as to why.
 
 ## 3 - COVID survey - reconstruct
+
+```{r}
+#| label: Question 3 code
+
+# Loading in data
+covid <- read_csv("data/covid-survey.csv")
+
+# Renaming columns to row 1
+colnames(covid) <- covid[1,] # Source: https://stackoverflow.com/questions/32054368/use-first-row-data-as-column-names-in-r
+
+# Deleting row 1 (now column names)
+remove.rows <- 1
+covid <- covid[!(row.names(covid) %in% remove.rows),] # Source: https://www.tutorialspoint.com/how-to-remove-rows-in-an-r-data-frame-using-row-names
+
+# Dimensions of dataset
+dim(covid)
+
+# Eliminate rows with all NAs but response ID
+covid <- covid |>
+  filter(!if_all(-response_id, is.na))
+
+# Dimensions of the dataset
+dim(covid)
+
+# Relabel values of columns
+covid |>
+  glimpse()
+
+covid <- covid |>
+    mutate(
+      exp_already_vax = recode(exp_already_vax, "0" = 'No', "1" = 'Yes'),      
+      exp_flu_vax = recode(exp_flu_vax, "0" = 'No', "1" = 'Yes'),
+      exp_profession = recode(exp_profession, "0" = 'Medical', "1" = 'Nursing'),
+      exp_gender = recode(exp_gender, "0" = 'Male', "1" = 'Female', "3" = 'Non-binary third gender', "4" = 'Prefer not to say'),
+      exp_race = recode(exp_race, "1" = 'American Indian/Alaskan Native', "2" = 'Asian', "3" = 'Black/African American', "4" = 'Native Hawaiian/Other Pacific Islander', "5" = 'White'),
+      exp_ethnicity = recode(exp_ethnicity, "1" = 'Hispanic/Latino', "2" = 'Non-Hispanic/Non-Latino'),
+      exp_age_bin = recode(exp_age_bin, "0" = '<20', "20" = '21-25', "25" = '26-30', "30" = '>30')
+    )
+
+# Dimensions of dataset
+dim(covid)
+
+# Calculating mean and percentiles
+covid_survey_longer <- covid |>
+  pivot_longer(
+    cols = starts_with("exp_"),
+    names_to = "explanatory",
+    values_to = "explanatory_value"
+  ) |> # This pivot lengthens the data so that instead of one column for each explanatory variable, there are instead multiple observations of each response, one per explanatory variable. The values of these explanatory variables were pivoted into a new column, explanatory_value.
+  filter(!is.na(explanatory_value)) |> # Eliminates NAs from explanatory values.
+  pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+  ) # This pivot again lengthens the data, this time for response variables. This means that for each response variable for each response ID, explanatory variables and their values are listed.
+
+# Display tibble
+covid_survey_longer
+```
 
 ## 4 - COVID survey - re-reconstruct
 
