@@ -8,6 +8,8 @@ format:
 toc: true
 ---
 
+SUPPRESS WARNINGS!!!
+
 ## 0 - Setup
 
 ```{r}
@@ -171,7 +173,7 @@ Some of the most intriguing results for me in this plot are located among identi
 ## 3 - COVID survey - reconstruct
 
 ```{r}
-#| label: Question 3 code
+#| label: Question 3 code: data wrangling
 
 # Loading in data
 covid <- read_csv("data/covid-survey.csv")
@@ -227,6 +229,89 @@ covid_survey_longer <- covid |>
 
 # Display tibble
 covid_survey_longer
+
+# Destring response_value
+covid_survey_longer$response_value <- as.numeric(as.character(covid_survey_longer$response_value)) # Source: Geeks for Geeks (https://www.geeksforgeeks.org/r-language/convert-data-frame-column-to-numeric-in-r/)
+
+sapply(covid_survey_longer, class)
+
+# Calculating summary statistics for identity groups
+covid_survey_summary_stats_by_group <- covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.1, na.rm = TRUE),
+            high = quantile(response_value, 0.9, na.rm = TRUE) # Source: https://tbradley1013.github.io/2018/10/01/calculating-quantiles-for-groups-with-dplyr-summarize-and-purrr-partial/
+            )
+
+# Display tibble
+covid_survey_summary_stats_by_group
+
+# Calculating summary statistics for all
+covid_survey_summary_stats_all <- covid_survey_longer |>
+  group_by(response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.1, na.rm = TRUE),
+            high = quantile(response_value, 0.9, na.rm = TRUE)
+            ) |>
+  mutate(
+    explanatory = "All",
+    explanatory_value = ""
+  )
+
+covid_survey_summary_stats_all$explanatory_value <- as.factor(as.character(covid_survey_summary_stats_all$explanatory_value))
+
+sapply(covid_survey_summary_stats_all, class)
+
+# Display tibble
+covid_survey_summary_stats_all
+
+# Bind the two summary statistic dataframes together
+covid_survey_summary_stats <- bind_rows(covid_survey_summary_stats_all, covid_survey_summary_stats_by_group)
+
+# Display tibble
+covid_survey_summary_stats
+```
+
+```{r}
+#| label: Question 3 code: plotting
+
+# Relevel factors
+covid_survey_summary_stats <- covid_survey_summary_stats |>
+  mutate(
+      explanatory_value = fct_rev(fct_relevel(explanatory_value, ">30", "26-30", "21-25", "<20")),
+      explanatory = fct_relevel(explanatory, "All", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax")
+  )
+
+# Set labels
+covid_survey_summary_stats <- covid_survey_summary_stats |>
+    mutate(
+      explanatory = recode(explanatory, "exp_age_bin" = 'Age', "exp_gender" = 'Gender', "exp_race" = 'Race', "exp_ethnicity" = 'Ethnicity', "exp_profession" = 'Profession', "exp_already_vax" = 'Had COVID vaccine', "exp_flu_vax" = 'Had flu vaccine this year')
+    )
+
+# Creating the plot
+covid_survey_summary_stats |>
+ggplot(aes(x = mean, y = factor(explanatory_value))) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.2) +
+  facet_grid(
+    rows = vars(explanatory), 
+    cols = vars(response), 
+    scales = "free_y",
+    space = "free_y", 
+    labeller = labeller(explanatory = label_wrap_gen(15), response = label_wrap_gen(15)) 
+    ) +
+  scale_x_continuous(breaks = 1:5) +
+  labs(
+    x = "Mean Likert score\n(Error bars range from 10th to 90th percentile)",
+    y = NULL,
+  ) +
+  theme(
+    strip.text = element_text(size = 6),
+    axis.text.y = element_text(size = 8),
+    panel.spacing = unit(0, "lines"),
+    panel.grid = element_blank()
+  )
+
 ```
 
 ## 4 - COVID survey - re-reconstruct
