@@ -173,7 +173,7 @@ Some of the most intriguing results for me in this plot are located among identi
 ## 3 - COVID survey - reconstruct
 
 ```{r}
-#| label: Question 3 code: data wrangling
+#| label: Question 3 code data wrangling
 
 # Loading in data
 covid <- read_csv("data/covid-survey.csv")
@@ -273,26 +273,39 @@ covid_survey_summary_stats
 ```
 
 ```{r}
-#| label: Question 3 code: plotting
+#| label: Question 3 code plotting
 
 # Relevel factors
 covid_survey_summary_stats <- covid_survey_summary_stats |>
   mutate(
       explanatory_value = fct_rev(fct_relevel(explanatory_value, ">30", "26-30", "21-25", "<20")),
-      explanatory = fct_relevel(explanatory, "All", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax")
+      explanatory = fct_relevel(explanatory, "All", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax"),
+      explanatory_value = fct_relevel(explanatory_value, "Female", "Male", "Non-binary third gender", "Prefer not to say"),
+      explanatory_value = fct_relevel(explanatory_value, "American Indian/Alaskan Native", "Asian", "Black/African American", "Native Hawaiian/Other Pacific Islander", "White"),
+      explanatory_value = fct_relevel(explanatory_value, "Non-Hispanic/Non-Latino", "Hispanic/Latino"),
+      explanatory_value = fct_relevel(explanatory_value, "Medical", "Nursing"),
+      explanatory_value = fct_relevel(explanatory_value, "No", "Yes")
   )
 
 # Set labels
 covid_survey_summary_stats <- covid_survey_summary_stats |>
     mutate(
-      explanatory = recode(explanatory, "exp_age_bin" = 'Age', "exp_gender" = 'Gender', "exp_race" = 'Race', "exp_ethnicity" = 'Ethnicity', "exp_profession" = 'Profession', "exp_already_vax" = 'Had COVID vaccine', "exp_flu_vax" = 'Had flu vaccine this year')
+      explanatory = recode(explanatory, "exp_age_bin" = 'Age', "exp_gender" = 'Gender', "exp_race" = 'Race', "exp_ethnicity" = 'Ethnicity', "exp_profession" = 'Profession', "exp_already_vax" = 'Had COVID vaccine', "exp_flu_vax" = 'Had flu vaccine this year'),
+      response = fct_relevel(response, "resp_safety", "resp_feel_safe_at_work", "resp_concern_safety", "resp_confidence_science",   "resp_trust_info", "resp_will_recommend"),
+      response = recode(response, 
+                        "resp_safety" = 'Based on my understanding, I believe the vaccine is safe', 
+                        "resp_confidence_science" = 'I am confident in the scientific vetting process for the new COVID vaccines', 
+                        "resp_feel_safe_at_work" = 'Getting the vaccine will make me feel safer at work', 
+                        "resp_will_recommend" = 'I will recommend the vaccine to family, friends, and community members', 
+                        "resp_trust_info" = 'I trust the information that I have received about the vaccines',
+                        "resp_concern_safety" = 'I am concerned about the safety and side effects of the vaccine')
     )
 
 # Creating the plot
 covid_survey_summary_stats |>
 ggplot(aes(x = mean, y = factor(explanatory_value))) +
-  geom_point() +
-  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.2) +
+  geom_point(size = 0.75) +
+  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.3) +
   facet_grid(
     rows = vars(explanatory), 
     cols = vars(response), 
@@ -307,13 +320,106 @@ ggplot(aes(x = mean, y = factor(explanatory_value))) +
   ) +
   theme(
     strip.text = element_text(size = 6),
-    axis.text.y = element_text(size = 8),
+    strip.text.y = element_text(angle = 0),
+    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(size = 6),
     panel.spacing = unit(0, "lines"),
-    panel.grid = element_blank()
+    panel.spacing.x = unit(0.3, "lines"),
+    axis.title.x = element_text(size = 8),
+    panel.grid = element_blank(),
+    strip.background = element_rect(fill = "gray90", color = "black")
   )
-
 ```
 
 ## 4 - COVID survey - re-reconstruct
+
+```{r}
+#| label: Question 4 code
+
+# Calculating summary statistics for identity groups
+covid_survey_summary_stats_by_group2 <- covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.25, na.rm = TRUE),
+            high = quantile(response_value, 0.75, na.rm = TRUE) # Source: https://tbradley1013.github.io/2018/10/01/calculating-quantiles-for-groups-with-dplyr-summarize-and-purrr-partial/
+            )
+
+# Calculating summary statistics for all
+covid_survey_summary_stats_all2 <- covid_survey_longer |>
+  group_by(response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.25, na.rm = TRUE),
+            high = quantile(response_value, 0.75, na.rm = TRUE)
+            ) |>
+  mutate(
+    explanatory = "All",
+    explanatory_value = ""
+  )
+
+covid_survey_summary_stats_all2$explanatory_value <- as.factor(as.character(covid_survey_summary_stats_all2$explanatory_value))
+
+sapply(covid_survey_summary_stats_all2, class)
+
+# Bind the two summary statistic dataframes together
+covid_survey_summary_stats2 <- bind_rows(covid_survey_summary_stats_all2, covid_survey_summary_stats_by_group2)
+
+# Display tibble
+covid_survey_summary_stats2
+
+# Relevel factors
+covid_survey_summary_stats2 <- covid_survey_summary_stats2 |>
+  mutate(
+      explanatory_value = fct_rev(fct_relevel(explanatory_value, ">30", "26-30", "21-25", "<20")),
+      explanatory = fct_relevel(explanatory, "All", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", "exp_profession", "exp_already_vax", "exp_flu_vax"),
+      explanatory_value = fct_relevel(explanatory_value, "Female", "Male", "Non-binary third gender", "Prefer not to say"),
+      explanatory_value = fct_relevel(explanatory_value, "American Indian/Alaskan Native", "Asian", "Black/African American", "Native Hawaiian/Other Pacific Islander", "White"),
+      explanatory_value = fct_relevel(explanatory_value, "Non-Hispanic/Non-Latino", "Hispanic/Latino"),
+      explanatory_value = fct_relevel(explanatory_value, "Medical", "Nursing"),
+      explanatory_value = fct_relevel(explanatory_value, "No", "Yes")
+  )
+
+# Set labels
+covid_survey_summary_stats2 <- covid_survey_summary_stats2 |>
+    mutate(
+      explanatory = recode(explanatory, "exp_age_bin" = 'Age', "exp_gender" = 'Gender', "exp_race" = 'Race', "exp_ethnicity" = 'Ethnicity', "exp_profession" = 'Profession', "exp_already_vax" = 'Had COVID vaccine', "exp_flu_vax" = 'Had flu vaccine this year'),
+      response = fct_relevel(response, "resp_safety", "resp_feel_safe_at_work", "resp_concern_safety", "resp_confidence_science",   "resp_trust_info", "resp_will_recommend"),
+      response = recode(response, 
+                        "resp_safety" = 'Based on my understanding, I believe the vaccine is safe', 
+                        "resp_confidence_science" = 'I am confident in the scientific vetting process for the new COVID vaccines', 
+                        "resp_feel_safe_at_work" = 'Getting the vaccine will make me feel safer at work', 
+                        "resp_will_recommend" = 'I will recommend the vaccine to family, friends, and community members', 
+                        "resp_trust_info" = 'I trust the information that I have received about the vaccines',
+                        "resp_concern_safety" = 'I am concerned about the safety and side effects of the vaccine')
+    )
+
+# Creating the plot
+covid_survey_summary_stats2 |>
+ggplot(aes(x = mean, y = factor(explanatory_value))) +
+  geom_point(size = 0.75) +
+  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.3) +
+  facet_grid(
+    rows = vars(explanatory), 
+    cols = vars(response), 
+    scales = "free_y",
+    space = "free_y", 
+    labeller = labeller(explanatory = label_wrap_gen(15), response = label_wrap_gen(15)) 
+    ) +
+  scale_x_continuous(breaks = 1:5) +
+  labs(
+    x = "Mean Likert score\n(Error bars range from 25th to 75th percentile)",
+    y = NULL,
+  ) +
+  theme(
+    strip.text = element_text(size = 6),
+    strip.text.y = element_text(angle = 0),
+    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(size = 6),
+    panel.spacing = unit(0, "lines"),
+    panel.spacing.x = unit(0.3, "lines"),
+    axis.title.x = element_text(size = 8),
+    panel.grid = element_blank(),
+    strip.background = element_rect(fill = "gray90", color = "black")
+  )
+```
 
 ## 5 - COVID survey - another view
