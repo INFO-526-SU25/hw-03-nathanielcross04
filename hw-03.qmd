@@ -425,3 +425,81 @@ ggplot(aes(x = mean, y = factor(explanatory_value))) +
 This plot drastically differs from that created in question 3. Reducing the percentile range of the error bars by 15 percentile on each end (30 percentiles overall), has significantly shrunk the distribution of the data displayed in the error bar. This definitely impacts interpretations of the plot, as well, as error bars that once spanned the entire Likert scale are now much more concentrated around their respective means due to the changes made. This trend is especially visible in the faceted columns, "I believe the vaccine is safe", and "I am concerned about side effects", which now have much more concentrated error ranges, even when faceted by identity, as well. Interpreting both of these plots side-by-side changes interpretation of these specific columns as we now know more about the distribution of the data, as though we were looking at a violin plot. One interesting finding that remains unchanged between the two plots is that of non-binary third gender respondents' answer to the "I believe the vaccine is safe" question, whose error bar is unchanged. This could be due to a low n, however. Overall, most of these error bars become shorter (or more concentrated), which tells us that these distributions are more concentrated between the 25-75 percentiles than the 10-90 percentiles. This makes complete sense given the Central Limit Theorem which tells us that as n \> 30, distributions will converge to a normal distribution.
 
 ## 5 - COVID survey - another view
+
+```{r}
+#| label: Q5 code diverging bar plot
+
+# Wrangling
+# Subsetting data to needed variables
+covid_q51 = subset(covid, select = -c(exp_profession, exp_flu_vax, exp_gender, exp_race, exp_ethnicity, exp_age_bin))
+
+# Pivoting longer
+covid_q51 <- covid_q51 |>
+    pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+    ) |>
+  filter(!is.na(exp_already_vax))
+
+sapply(covid_q51, class)
+
+# Summary statistics
+covid_q51$response_value <- as.numeric(as.character(covid_q51$response_value))
+
+covid_q51_summary <- covid_q51 |>
+  group_by(response, exp_already_vax) |>
+  summarize(mean = mean(response_value, na.rm = TRUE))
+
+# Converting "No" means to negatives
+covid_q51_summary <- covid_q51_summary |>
+  mutate(mean_adj = ifelse(exp_already_vax == "No", -mean, mean))
+
+# Relabeling response
+covid_q51_summary <- covid_q51_summary |>
+  mutate(
+          response = recode(response, 
+                        "resp_safety" = 'Based on my understanding, I believe the vaccine is safe', 
+                        "resp_confidence_science" = 'I am confident in the scientific vetting process for the new COVID vaccines', 
+                        "resp_feel_safe_at_work" = 'Getting the vaccine will make me feel safer at work', 
+                        "resp_will_recommend" = 'I will recommend the vaccine to family, friends, and community members', 
+                        "resp_trust_info" = 'I trust the information that I have received about the vaccines',
+                        "resp_concern_safety" = 'I am concerned about the safety and side effects of the vaccine')
+    )
+covid_q51_summary$response_wrap = str_wrap(covid_q51_summary$response, width = 45) # Source: https://stackoverflow.com/questions/21878974/wrap-long-axis-labels-via-labeller-label-wrap-in-ggplot2
+
+# Plot
+covid_q51_summary |>
+  ggplot(aes(x = mean_adj, y = reorder(response_wrap, -mean_adj), fill = exp_already_vax)) +
+  geom_col(position = "identity", width = 0.6) +
+  labs(
+    y = NULL, 
+    x = "Mean Likert scale response\n1 (Strongly agree) to 5 (Strongly disagree)",
+    title = "Already-vaccinated students more confident\nin safety of COVID-19 vaccine",
+    caption = "Source: Pavan Shah, Giorgio Caturegli, Galen Shi, and Joshua Materi | Johns Hopkins School of Medicine"
+  ) +
+  scale_x_continuous(
+    labels = abs,
+    limits = c(-5, 5),
+    breaks = c(-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5)
+    ) +
+  annotate(
+    geom = "text",
+    x = 0,
+    y = Inf,
+    label = "Not already vaccinated ",
+    size = 3,
+    color = "black",
+    hjust = 1
+  ) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    legend.position = "none",
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 8),
+    plot.caption = element_text(size = 6),
+    axis.text.y = element_text(size = 7),
+    plot.title.position = "plot",
+  ) +
+  coord_cartesian(clip = "off")
+```
