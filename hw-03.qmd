@@ -6,14 +6,18 @@ format:
   html:
     embed-resources: true
 toc: true
+execute:
+  warning: false
+  message: false
+  error: false
 ---
-
-SUPPRESS WARNINGS!!!
 
 ## 0 - Setup
 
 ```{r}
 #| label: R Setup
+#| execute: 
+#| output: false
 
 # Install and load packages
 if(!require(pacman))
@@ -145,16 +149,25 @@ plot <- income_clean |>
     color = "black",
     family = "mono"
   ) +
+  annotate(
+    geom = "text",
+    x = "$100-200",
+    y = 0,
+    label = "CLASS    ACTUAL AVERAGE                                   \n\n\n",
+    size = 2,
+    color = "black",
+    family = "mono"
+  ) +
    scale_x_discrete(labels = c("1,000     $1,125 \nAND OVER          ", "$750-1000   $880   ", "$500-750   $547   ", "$400-500   $433.82", "$300-400   $335.66", "$200-300   $249.45", "$100-200   $139.10")) +
   coord_flip(clip = "off") +
-  scale_fill_manual(values = c("snow2", "slategray1", "sienna1", "purple", "black")) +
-  theme(
+  scale_fill_manual(breaks = c('Rent', 'Food', 'Clothes', 'Tax', 'Other'), values = c("black", "purple", "sienna1", "slategray1", "snow2")) + # Source: https://www.statology.org/ggplot-legend-order/
+   theme(
     legend.position = "top",
     plot.title.position = "plot",
     plot.title = element_text(size = 10, hjust = 0.5, face = "bold"),
     panel.grid = element_blank(),
     axis.text.x = element_blank(),
-    axis.text.y = element_text(size =7),
+    axis.text.y = element_text(size =7, color = "black"),
     text = element_text(family = "mono"),
     legend.title = element_blank(), 
     legend.text  = element_text(size = 9),
@@ -475,8 +488,8 @@ covid_q51_summary |>
   labs(
     y = NULL, 
     x = "Mean response",
-    title = "Already-vaccinated students more confident\nin safety of COVID-19 vaccine",
-    caption = "Source: Pavan Shah, Giorgio Caturegli, Galen Shi, and Joshua Materi | Johns Hopkins School of Medicine",
+    title = "Already-vaccinated students more confident\nabout the safety of COVID-19 vaccine",
+    caption = "Source: Shah et al. | Johns Hopkins School of Medicine",
     subtitle = "On a Likert scale from 1 (strongly agree) to 5 (strongly disagree)"
   ) +
   scale_x_continuous(
@@ -516,9 +529,88 @@ covid_q51_summary |>
   coord_cartesian(clip = "off")
 ```
 
+### Alt text
+
+-   The figure is a diverging bar plot titled, "Already-vaccinated students more confident in safety of COVID-19 vaccine" and depicts responses to six statements measuring perceptions of the vaccine and its safety using a Likert scale where 1 indicates strong agreement and 5 strong disagreement. Mean responses to six statements are shows, the statements being "Based on my understanding, I believe the vaccine is safe," "I am confident in the scientific vetting process for the new COVID vaccines," "Getting the vaccine will make me feel safer at work," "I will recommend the vaccine to family, friends, and community members," "I trust the information that I have received about the vaccines," and "I am concerned about the safety and side effects of the vaccine." The bars diverge conditioned on whether or not the respondent had already received the vaccine at the time of surveying and there is a clear trend that shows that those already vaccinated agree with all statements more than those who were unvaccinated (with the exception of "I am concerned about the safety and side effects of the vaccine," which is phrased inversely and for this statement the trend is indirect). More specifically, for all statements except the inverted one, already-vaccinated respondents replied with an approximate of 1.5 mean Likert scale, and those unvaccinated on average replied around 3.2. The data yields from Shah et al. from Johns Hopkins School of Medicine.
+
 ```{r}
 #| label: Q5 code one hundred percent bar chart
 
+# Wrangling
+# Subsetting data to needed variables
+covid_q52 = subset(covid, select = -c(exp_profession, exp_flu_vax, exp_race, exp_already_vax, exp_ethnicity, exp_age_bin))
+
+# Pivoting longer
+covid_q52 <- covid_q52 |>
+    pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+    ) |>
+  filter(!is.na(exp_gender))
+
+sapply(covid_q52, class)
+
+# Destring IV
+covid_q52$response_value <- factor(covid_q52$response_value, levels = 5:1)
+
+# Summarizing
+covid_q52_summary <- covid_q52 |>
+  group_by(response, response_value) |>
+  summarize(n = n(), .groups = "drop") |>
+  group_by(response) |>
+  mutate(percent = n / sum(n))
 
 
+# Relabeling response
+covid_q52_summary <- covid_q52_summary |>
+  mutate(
+          response = recode(response, 
+                        "resp_safety" = 'Based on my understanding, I believe the vaccine is safe', 
+                        "resp_confidence_science" = 'I am confident in the scientific vetting process for the new COVID vaccines', 
+                        "resp_feel_safe_at_work" = 'Getting the vaccine will make me feel safer at work', 
+                        "resp_will_recommend" = 'I will recommend the vaccine to family, friends, and community members', 
+                        "resp_trust_info" = 'I trust the information that I have received about the vaccines',
+                        "resp_concern_safety" = 'I am concerned about the safety and side effects of the vaccine')
+    )
+
+
+# Set wrap
+covid_q52_summary$response_wrap = str_wrap(covid_q52_summary$response, width = 45) # Source: https://stackoverflow.com/questions/21878974/wrap-long-axis-labels-via-labeller-label-wrap-in-ggplot2
+
+# Plot
+covid_q52_summary |>
+  filter(!is.na(response_value)) |>
+ggplot(aes(x = percent, y = reorder(response_wrap, -percent), fill = response_value)) +
+  geom_col(position = "fill", width = 0.7) +
+    labs(
+    y = NULL,
+    x = "Percent of responses",
+    title = "Majority of students confident about the \nsafety of the COVID-19 vaccine",    
+    caption = "Source: Shah et al. | Johns Hopkins School of Medicine",
+    subtitle = "On a Likert scale from 1 (strongly agree) to 5 (strongly disagree)"
+  ) +
+  scale_fill_manual(breaks = c('1', '2', '3', '4', '5'), values = c("#CC79A7", "#56B4E9", "#009E73", "#F0E442", "#E69F00")) +
+  scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1),labels = scales::percent_format()) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    legend.position = "right",
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 8),
+    plot.caption = element_text(size = 6),
+    axis.text.y = element_text(size = 7),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(size = 10),
+    legend.title = element_blank(),
+    legend.key.size = unit(0.3, 'cm'), # Source: https://www.statology.org/ggplot2-legend-size/
+    legend.text = element_text(size = 8)
+  )
 ```
+
+### Alt text
+
+-   The figure is a stacked bar plot titled, "Majority of students confident about the safety of the COVID-19 vaccine" and depicts distribtuion of Likert scale replies in response to six statements measuring perceptions of the COVID-19 vaccine. The Likert scale is scaled from 1, indicating strong agreement, to 5, showing strong disagreement. For the statements, "I will recommend the vaccine to family, friends, and community members," "I trust the information that I have received about the vaccines," "I am confident in the scientific vetting process for the new COVID vaccines," and "Getting the vaccine will make me feel safer at work," the percentage of students who strongly or somewhat agree hovers around 90 to 92%. For the statement, "Based on my understanding, I believe the vaccine is safe," this agreement is lower, around 75%. Finally, for the statement, "I am concerned about the safety and side effects of the vaccine," agreement is around 35%, while disagreement is around 55%. The data yields from Shah et al. from Johns Hopkins School of Medicine.
+
+### Plot comparison
+
+-   These plots depict aligned stories, although through different means. Both plots show us that most of the student respondents from this survey felt confident about the vaccine and its safety, as seen in the high rates of strong agreement with all five of the positively framed statements here and moderate disagreement with the negatively framed statement. However, these plots adopt different approaches and provide us with different details. For example, the diverging bar plot shows us another variable, whether or not the respondent had already been vaccinated, revealing interesting correlations with confidence in the vaccine. However, this plot only shows us the mean Likert response for each statement for each condition group. Contrastingly, the stacked bar plot shows us more of the distribution of Likert responses (1 through 5) for each of the six statements, but does not incorporate the added complexity of an additional variable. The distribution provides interesting details, though, such as the distribution of agreement responses to the statement, "Based on my understanding, I believe the vaccine is safe," which does not follow the same trend as the other positively framed statements and yields less agreement.
