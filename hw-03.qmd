@@ -474,9 +474,10 @@ covid_q51_summary |>
   geom_col(position = "identity", width = 0.6) +
   labs(
     y = NULL, 
-    x = "Mean Likert scale response\n1 (Strongly agree) to 5 (Strongly disagree)",
+    x = "Mean response",
     title = "Already-vaccinated students more confident\nin safety of COVID-19 vaccine",
-    caption = "Source: Pavan Shah, Giorgio Caturegli, Galen Shi, and Joshua Materi | Johns Hopkins School of Medicine"
+    caption = "Source: Pavan Shah, Giorgio Caturegli, Galen Shi, and Joshua Materi | Johns Hopkins School of Medicine",
+    subtitle = "On a Likert scale from 1 (strongly agree) to 5 (strongly disagree)"
   ) +
   scale_x_continuous(
     labels = abs,
@@ -487,11 +488,21 @@ covid_q51_summary |>
     geom = "text",
     x = 0,
     y = Inf,
-    label = "Not already vaccinated ",
+    label = "Not already vaccinated  ",
     size = 3,
-    color = "black",
+    color = "#E69F00",
     hjust = 1
   ) +
+   annotate(
+    geom = "text",
+    x = 0,
+    y = Inf,
+    label = "  Already vaccinated ",
+    size = 3,
+    color = "#56B4E9",
+    hjust = 0
+  ) +
+  scale_fill_manual(values=c("#E69F00","#56B4E9")) +
   theme(
     panel.grid.minor.x = element_blank(),
     legend.position = "none",
@@ -500,6 +511,14 @@ covid_q51_summary |>
     plot.caption = element_text(size = 6),
     axis.text.y = element_text(size = 7),
     plot.title.position = "plot",
+    plot.subtitle = element_text(size = 10)
   ) +
   coord_cartesian(clip = "off")
+```
+
+```{r}
+#| label: Q5 code one hundred percent bar chart
+
+
+
 ```
