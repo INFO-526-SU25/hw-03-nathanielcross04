@@ -440,7 +440,10 @@ This plot drastically differs from that created in question 3. Reducing the perc
 ## 5 - COVID survey - another view
 
 ```{r}
-#| label: Q5 code diverging bar plot
+#| label: Q5 code diverging bar plot 1
+
+# I know this is not what the prompt was asking for but I'm proud of it so wanted to keep it in :)
+# See correct plots below this chunk
 
 # Wrangling
 # Subsetting data to needed variables
@@ -529,12 +532,8 @@ covid_q51_summary |>
   coord_cartesian(clip = "off")
 ```
 
-### Alt text
-
--   The figure is a diverging bar plot titled, "Already-vaccinated students more confident in safety of COVID-19 vaccine" and depicts responses to six statements measuring perceptions of the vaccine and its safety using a Likert scale where 1 indicates strong agreement and 5 strong disagreement. Mean responses to six statements are shows, the statements being "Based on my understanding, I believe the vaccine is safe," "I am confident in the scientific vetting process for the new COVID vaccines," "Getting the vaccine will make me feel safer at work," "I will recommend the vaccine to family, friends, and community members," "I trust the information that I have received about the vaccines," and "I am concerned about the safety and side effects of the vaccine." The bars diverge conditioned on whether or not the respondent had already received the vaccine at the time of surveying and there is a clear trend that shows that those already vaccinated agree with all statements more than those who were unvaccinated (with the exception of "I am concerned about the safety and side effects of the vaccine," which is phrased inversely and for this statement the trend is indirect). More specifically, for all statements except the inverted one, already-vaccinated respondents replied with an approximate of 1.5 mean Likert scale, and those unvaccinated on average replied around 3.2. The data yields from Shah et al. from Johns Hopkins School of Medicine.
-
 ```{r}
-#| label: Q5 code one hundred percent bar chart
+#| label: Q5 diverging bar plot
 
 # Wrangling
 # Subsetting data to needed variables
@@ -561,6 +560,68 @@ covid_q52_summary <- covid_q52 |>
   group_by(response) |>
   mutate(percent = n / sum(n))
 
+# Adjusting percentages
+covid_q52_summary2 <- covid_q52_summary |>
+  filter(!is.na(response_value)) |>
+  mutate(
+    direction = case_when(
+      response_value %in% c("4", "5") ~ -percent,
+      response_value %in% c("1", "2") ~ percent,
+      response_value == "3" ~ percent,
+      TRUE ~ 0
+    ),
+    response_value = factor(response_value, levels = c("5", "4", "1", "2", "3")),
+  )
+
+# Labels
+covid_q52_summary2 <- covid_q52_summary2 |>
+  mutate(
+          response = recode(response, 
+                        "resp_safety" = 'Based on my understanding, I believe the vaccine is safe', 
+                        "resp_confidence_science" = 'I am confident in the scientific vetting process for the new COVID vaccines', 
+                        "resp_feel_safe_at_work" = 'Getting the vaccine will make me feel safer at work', 
+                        "resp_will_recommend" = 'I will recommend the vaccine to family, friends, and community members', 
+                        "resp_trust_info" = 'I trust the information that I have received about the vaccines',
+                        "resp_concern_safety" = 'I am concerned about the safety and side effects of the vaccine')
+    )
+
+# Set wrap
+covid_q52_summary2$response_wrap = str_wrap(covid_q52_summary2$response, width = 45) # Source: https://stackoverflow.com/questions/21878974/wrap-long-axis-labels-via-labeller-label-wrap-in-ggplot2
+
+# Plot
+covid_q52_summary2 |>
+  ggplot(aes(x = direction, y = reorder(response_wrap, -direction), fill = response_value)) +
+  geom_col(width = 0.7) +
+  labs(
+    y = NULL,
+    x = "Percent of responses",
+    title = "Majority of students confident about the \nsafety of the COVID-19 vaccine",
+    subtitle = "On a Likert scale from 1 (strongly agree) to 5 (strongly disagree)",
+    caption = "Source: Shah et al. | Johns Hopkins School of Medicine"
+  ) +
+  scale_fill_manual(breaks = c('5', '4', '3', '2', '1'), values = c("#CC79A7", "#56B4E9", "#009E73", "#F0E442", "#E69F00")) +
+  scale_x_continuous(labels = percent_format(accuracy = 1)) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    legend.position = "top",
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 8),
+    plot.caption = element_text(size = 6),
+    axis.text.y = element_text(size = 7),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(size = 10),
+    legend.title = element_blank(),
+    legend.key.size = unit(0.3, 'cm'), # Source: https://www.statology.org/ggplot2-legend-size/
+    legend.text = element_text(size = 8)
+  )
+```
+
+### Alt text
+
+-   The figure is a diverging bar plot titled, "Majority of students confident about the safety of the COVID-19 vaccine" and depicts responses to six statements measuring perceptions of the vaccine and its safety using a Likert scale where 1 indicates strong agreement and 5 strong disagreement. Distributions of responses to six statements are shows, the statements being "Based on my understanding, I believe the vaccine is safe," "I am confident in the scientific vetting process for the new COVID vaccines," "Getting the vaccine will make me feel safer at work," "I will recommend the vaccine to family, friends, and community members," "I trust the information that I have received about the vaccines," and "I am concerned about the safety and side effects of the vaccine." There is a clear trend that shows that those surveyed agree with all statements (with the exception of "I am concerned about the safety and side effects of the vaccine," which is phrased inversely and for this statement the trend is indirect).
+
+```{r}
+#| label: Q5 code one hundred percent bar chart
 
 # Relabeling response
 covid_q52_summary <- covid_q52_summary |>
@@ -573,7 +634,6 @@ covid_q52_summary <- covid_q52_summary |>
                         "resp_trust_info" = 'I trust the information that I have received about the vaccines',
                         "resp_concern_safety" = 'I am concerned about the safety and side effects of the vaccine')
     )
-
 
 # Set wrap
 covid_q52_summary$response_wrap = str_wrap(covid_q52_summary$response, width = 45) # Source: https://stackoverflow.com/questions/21878974/wrap-long-axis-labels-via-labeller-label-wrap-in-ggplot2
@@ -613,4 +673,4 @@ ggplot(aes(x = percent, y = reorder(response_wrap, -percent), fill = response_va
 
 ### Plot comparison
 
--   These plots depict aligned stories, although through different means. Both plots show us that most of the student respondents from this survey felt confident about the vaccine and its safety, as seen in the high rates of strong agreement with all five of the positively framed statements here and moderate disagreement with the negatively framed statement. However, these plots adopt different approaches and provide us with different details. For example, the diverging bar plot shows us another variable, whether or not the respondent had already been vaccinated, revealing interesting correlations with confidence in the vaccine. However, this plot only shows us the mean Likert response for each statement for each condition group. Contrastingly, the stacked bar plot shows us more of the distribution of Likert responses (1 through 5) for each of the six statements, but does not incorporate the added complexity of an additional variable. The distribution provides interesting details, though, such as the distribution of agreement responses to the statement, "Based on my understanding, I believe the vaccine is safe," which does not follow the same trend as the other positively framed statements and yields less agreement.
+-   These plots depict aligned stories, although through different means. Both plots show us that most of the student respondents from this survey felt confident about the vaccine and its safety, as seen in the high rates of strong agreement with all five of the positively framed statements here and moderate disagreement with the negatively framed statement. However, these plots adopt different approaches and provide us with different details. For example, the diverging bar plot does a great job of showing us the difference between agreeing and disagreeing responses to the statements, due to the divergence at neautrality. Contrastingly, the stacked bar plot shows us more of the distribution of Likert responses (1 through 5) for each of the six statements compared to each other statement. The distribution provides interesting details, though, such as the distribution of agreement responses to the statement, "Based on my understanding, I believe the vaccine is safe," which does not follow the same trend as the other positively framed statements and yields less agreement.
